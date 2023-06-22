@@ -9,9 +9,8 @@
     <div id="Quiz_body">
       <div id="Quiz_streak">{{streak}}</div>
       <div id="Quiz_equation">{{(equation||"Choose a Quiz")}}</div>
-      <!--   The solution with setting the id is not very smart but will suffice for this project!   -->
-      <div id="Quiz_answers">
-        <div class="Quiz_answer" v-for="(answer, index) in answers" :key="answer" @click="check_answer" :id="position === index ? 'correct' : ''" :ref="(el) => functionRef(el, index)">{{answer}}</div>
+      <div id="Quiz_answers" ref="for_parent">
+        <div class="Quiz_answer" v-for="(answer, index) in answers" :key="index" @click="check_answer($event.target,answer)">{{answer}}</div>
       </div>
     </div>
   </div>
@@ -19,20 +18,17 @@
 
 <script setup>
   import {ref} from "vue";
-  const correct = ref(null)
+
   const equation = ref("")
   const answers = ref([])
   const streak = ref(0)
   const position = ref(null)
 
+  const for_parent = ref()
+  let correct_answer = null
   let operator_selected = ''
   let answered = false
 
-  const functionRef = (el, index) => {
-    if(index === position.value){
-      correct.value = el
-    }
-  }
 
   const get_random_num = (max) => Math.ceil(Math.random()*max)
 
@@ -44,44 +40,44 @@
 
   const start_quiz = (operator) => {
     operator_selected = operator
-    equation.value = ""
     equation.value = get_equation(operator)
     get_answers(operator)
   }
 
-
+  //Eval is bad practice but as security is not relevant I will use it here
   const get_answers = (operator) =>{
     answers.value = []
-    const correct_ = round_for_div(eval(equation.value))
+    correct_answer = round_for_div(eval(equation.value))
     position.value = get_random_num(4)
-
+    let temp_answers = []
     for (let i = 0; i < 5; i++) {
       if (i === position.value) {
-        answers.value.push(correct_)
+        temp_answers.push(correct_answer)
         continue
       }
       let answer = round_for_div(eval(get_equation(operator)))
-      while (answer === correct_ || answers.value.indexOf(answer) !== -1){
+      while (answer === correct_answer || temp_answers.indexOf(answer) !== -1){
         answer = round_for_div(eval(get_equation(operator)))
       }
-      answers.value.push(answer)
+      temp_answers.push(answer)
     }
+    answers.value = temp_answers
   }
 
-  const check_answer = (e) =>{
+  const check_answer = (e,answer) =>{
     if(answered){return}
-    answered = true
-    if(e.target.id === 'correct'){
-      e.target.style.background = "green"
+    if(answer === correct_answer){
+      e.style.background = "green"
       streak.value++
     }else{
-      e.target.style.background = "red"
-      correct.value.style.background = "green"
+      e.style.background = "red"
+      for_parent.value.children[position.value].style.background = "green"
       streak.value = 0
+
     }
     setTimeout(() => {
-      e.target.style.background = "var(--steel)"
-      correct.value.style.background = "var(--steel)"
+      e.style.background = "var(--steel)"
+      for_parent.value.children[position.value].style.background = "var(--steel)"
       answered = false
       start_quiz(operator_selected)
     }, 500)
